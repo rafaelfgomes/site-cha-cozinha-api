@@ -1,0 +1,62 @@
+version: '3'
+
+services:
+  db:
+    volumes: 
+      - mariadb_data:/var/lib/mysql
+    build:
+      context: .
+      dockerfile: ./docker/mariadb/Dockerfile
+    container_name: site-cha-cozinha-db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: "${DATABASE_ROOT_PASS}"
+      MARIADB_DATABASE: "${DATABASE_NAME}"
+    ports:
+      - "3308:3306"
+    networks:
+      default:
+        ipv4_address: 172.30.0.2
+
+  api:
+    volumes: 
+      - ./api:/var/www/html
+    container_name: site-cha-cozinha-api
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+      args:
+        TIMEZONE: "${TIMEZONE}"
+        DBPASS: "${DATABASE_ROOT_PASS}"
+        DBUSER: "${DB_USER}"
+        DBNAME: "${DB_NAME}"
+        UID: "${USER_ID}"
+    depends_on:
+      - "db"
+    networks:
+      default:
+        ipv4_address: 172.30.0.3
+
+  webserver:
+    volumes: 
+      - ./api:/var/www/html
+    container_name: site-cha-cozinha-ws
+    build: 
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+    ports:
+      - "13000:80"
+      - "13443:443"
+    depends_on:
+      - "api"
+    networks:
+      default:
+        ipv4_address: 172.30.0.4
+
+networks:
+  default:
+    external: 
+      name: site-cha-cozinha_network
+
+volumes:
+  mariadb-data:
